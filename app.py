@@ -15,7 +15,7 @@ class Post(db.Model):
     TIPO_GRUPO = db.column(db.String(80))
     cod_est_grupo = db.column(db.Integer)
     estado = db.column(db.String(80))
-    cupo = db.column(db.Integer);
+    cupo = db.column(db.Integer)
     disponibles = db.column(db.Integer)
     matriculados = db.column(db.Integer)
     prematriculados = db.column(db.Integer)
@@ -70,22 +70,19 @@ class Post(db.Model):
 
 
 @app.route("/import", methods=['GET', 'POST'])
-def doimport():
+def importoexcel():
     if request.method == 'POST':
 
-        def category_init_func(row):
-            c = Category(row['name'])
-            c.id = row['id']
-            return c
-
-        def post_init_func(row):
-            c = Category.query.filter_by(name=row['category']).first()
-            p = Post(row['title'], row['body'], c, row['pub_date'])
+        def post_init_func(row):           
+            p = Post(row['cod_materia'],row['nom_materia'], row['cod_grupo'],row['ID_TIPO_GRUPO'],row['TIPO_GRUPO']
+            ,row['cod_est_grupo'],row['estado'],row['cupo'], row['disponibles'], row['matriculados'], row['levantamientos']
+            ,row['disponibles_real'], row['horariogrp'], row['nom_periodo'], row['cod_edificio'], row['cod_escuela']
+            ,row['entra'], row['sale'], row['dia'], row['cod_aula'], row['TIPO_DOCENTE'], row['NOMBRE'], row['PROFESOR'])
             return p
         request.save_book_to_database(
             field_name='file', session=db.session,
             tables=[Post],
-            initializers=[category_init_func, post_init_func])
+            initializers=[post_init_func])
         return redirect(url_for('.handson_table'), code=302)
     return '''
     <!doctype html>
@@ -96,10 +93,25 @@ def doimport():
     </form>
     '''
 @app.route("/export", methods=['GET'])
-def doexport():
+def exportoexcel():
     return excel.make_response_from_tables(db.session, [Post], "xlsx")
+
+@app.route("/u1/cursos/", methods=['GET'])
+def cursos():
+    cursos =  Post.query.order_by(Post.id).all()
+    return jsonify({
+        "data": [{"id": x.id, "materia": x.nom_materia,} for x in cursos]}),200
+
+@app.route("/curso/<item>", methods=["GET"])
+def busqueda_curso(item):    
+    post =  Post.query.filter(Post.cod_grupo==item).all()
+    return jsonify({
+      "data": [{"id": x.id, "materia": x.nom_materia, "cod_materia": x.cod_grupo, "disponibles":x.disponibles,"matriculados":x.matriculados,"cod_edificio":x.cod_edificio,"Profesor":x.PROFESOR} for x in post]
+    })       
 
 if __name__ == "__main__":
     excel.init_excel(app)
-    #db.create_all()
+    db.create_all()
     app.run(debug=True)
+
+    
